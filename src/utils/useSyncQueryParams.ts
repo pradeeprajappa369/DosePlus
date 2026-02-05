@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-type QueryState = Record<string, string>;
+type QueryState = Record<string, string | number>;
 type SetterMap = Record<string, (value: string) => void>;
 
 export function useSyncQueryParams(
@@ -10,8 +10,9 @@ export function useSyncQueryParams(
 ) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Prevent infinite loop
+  // Guards
   const isUpdatingFromUrl = useRef(false);
+  const lastSyncedQuery = useRef<string>('');
 
   /* --------------------------------
      URL → STATE
@@ -19,9 +20,10 @@ export function useSyncQueryParams(
   useEffect(() => {
     isUpdatingFromUrl.current = true;
 
-    Object.keys(setters).forEach(key => {
+    Object.keys(setters).forEach((key) => {
       const value = searchParams.get(key);
-      if (value !== null && state[key] !== value) {
+
+      if (value !== null && String(state[key]) !== value) {
         setters[key](value);
       }
     });
@@ -35,25 +37,25 @@ export function useSyncQueryParams(
   useEffect(() => {
     if (isUpdatingFromUrl.current) return;
 
-    const nextParams: Record<string, string> = {};
-    let hasChanged = false;
+    const params = new URLSearchParams();
 
-    Object.keys(state).forEach(key => {
-      const currentValue = searchParams.get(key) ?? '';
-      nextParams[key] = state[key];
-
-      if (currentValue !== state[key]) {
-        hasChanged = true;
-      }
+    Object.keys(state).forEach((key) => {
+      params.set(key, String(state[key]));
     });
 
-    if (hasChanged) {
-      setSearchParams(nextParams, { replace: true });
-    }
+    const nextQuery = params.toString();
+
+    // 🔒 Prevent infinite navigation loop
+    if (nextQuery === lastSyncedQuery.current) return;
+
+    lastSyncedQuery.current = nextQuery;
+    setSearchParams(params, { replace: true });
   }, [
     state.search,
     state.category,
     state.status,
-    state.stock
+    state.stock,
+    state.page,
+    state.limit
   ]);
 }
