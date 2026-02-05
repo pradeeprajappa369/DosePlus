@@ -7,7 +7,7 @@ export const inventoryData = [
     stockQuantity: 450,
     expiryDate: '2025-08-15',
     price: 12.50,
-    status: 'In Stock' as const
+    status: 'In Stock' 
   },
   {
     id: 'INV002',
@@ -17,7 +17,7 @@ export const inventoryData = [
     stockQuantity: 35,
     expiryDate: '2025-06-20',
     price: 5.99,
-    status: 'Low Stock' as const
+    status: 'Low Stock' 
   },
   {
     id: 'INV003',
@@ -27,7 +27,7 @@ export const inventoryData = [
     stockQuantity: 0,
     expiryDate: '2024-03-10',
     price: 8.75,
-    status: 'Expired' as const
+    status: 'Expired' 
   },
   {
     id: 'INV004',
