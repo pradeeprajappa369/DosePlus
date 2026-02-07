@@ -1,225 +1,288 @@
-import { useState } from 'react';
+import { useState, useRef } from "react";
+import InputField from "@/CommonComponents/InputField";
+import { AddProductApi } from "@/API/InventoryAPI";
 
 interface ManualEntryTabProps {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function ManualEntryTab({ onClose }: ManualEntryTabProps) {
-  const [formData, setFormData] = useState({
-    productName: '',
-    category: 'prescription',
-    batchNumber: '',
-    boxNumber:'',
-    stockQuantity: '',
-    purchasePrice: '',
-    sellingPrice: '',
-    expiryDate: '',
-    supplier: '',
-    invoiceNumber: '',
+interface FormData {
+  productName: string;
+  category: string;
+  batchNumber: string;
+  boxNumber: string;
+  stockQuantity: string;
+  purchasePrice: string;
+  sellingPrice: string;
+  expiryDate: string;
+  supplier: string;
+  invoiceNumber: string;
+}
+
+export const PHARMACY_CATEGORIES = [
+  { key: "antibiotic", label: "Antibiotic" },
+  { key: "painkiller", label: "Painkiller" },
+  { key: "antipyretic", label: "Antipyretic (Fever)" },
+  { key: "antacid", label: "Antacid" },
+  { key: "antihistamine", label: "Antihistamine (Allergy)" },
+  { key: "vitamin", label: "Vitamins" },
+  { key: "supplement", label: "Supplements" },
+  { key: "cough-cold", label: "Cough & Cold" },
+  { key: "respiratory", label: "Respiratory Care" },
+  { key: "diabetic-care", label: "Diabetic Care" },
+  { key: "cardiac", label: "Cardiac / Heart Care" },
+  { key: "gastro", label: "Gastrointestinal" },
+  { key: "dermatology", label: "Dermatology / Skin Care" },
+  { key: "eye-ear", label: "Eye & Ear Care" },
+  { key: "women-care", label: "Women's Health" },
+  { key: "men-care", label: "Men's Health" },
+  { key: "baby-care", label: "Baby Care" },
+  { key: "first-aid", label: "First Aid" },
+  { key: "antiseptic", label: "Antiseptic" },
+  { key: "surgical", label: "Surgical Items" },
+];
+
+export default function ManualEntryTab({
+  onClose,
+  onSuccess,
+}: ManualEntryTabProps) {
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>(
+    {}
+  );
+
+  const inputRefs = useRef<
+    Partial<Record<keyof FormData, HTMLDivElement | null>>
+  >({});
+
+  const [formData, setFormData] = useState<FormData>({
+    productName: "",
+    category: "",
+    batchNumber: "",
+    boxNumber: "",
+    stockQuantity: "",
+    purchasePrice: "",
+    sellingPrice: "",
+    expiryDate: "",
+    supplier: "",
+    invoiceNumber: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Adding product:', formData);
-    // onClose();
+  const handleChange = (field: keyof FormData, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [field]: "",
+    }));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+
+    if (!formData.productName.trim())
+      newErrors.productName = "Product name is required";
+
+    if (!formData.category) newErrors.category = "Category is required";
+
+    if (!formData.batchNumber.trim())
+      newErrors.batchNumber = "Batch number is required";
+
+    if (!formData.boxNumber) newErrors.boxNumber = "Box number is required";
+
+    if (!formData.stockQuantity)
+      newErrors.stockQuantity = "Stock quantity is required";
+
+    if (!formData.purchasePrice)
+      newErrors.purchasePrice = "Purchase price is required";
+
+    if (!formData.sellingPrice)
+      newErrors.sellingPrice = "Selling price is required";
+
+    if (!formData.expiryDate) newErrors.expiryDate = "Expiry date is required";
+
+    if (!formData.supplier.trim()) newErrors.supplier = "Supplier is required";
+
+    setErrors(newErrors);
+
+    const firstErrorField = Object.keys(newErrors)[0] as keyof FormData;
+
+    if (firstErrorField && inputRefs.current[firstErrorField]) {
+      inputRefs.current[firstErrorField]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const isValid = validateForm();
+    if (!isValid) return;
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        productName: formData.productName.trim(),
+        category: formData.category,
+        batchNumber: formData.batchNumber.trim(),
+        boxNumber: Number(formData.boxNumber),
+        stockQuantity: Number(formData.stockQuantity),
+        purchasePrice: Number(formData.purchasePrice),
+        sellingPrice: Number(formData.sellingPrice),
+        expiryDate: formData.expiryDate,
+        supplier: formData.supplier.trim(),
+        invoiceNumber: formData.invoiceNumber.trim(),
+      };
+
+      const res = await AddProductApi(payload);
+
+      if (res?.data?.success) {
+        onSuccess?.();
+        setFormData({
+          productName: "",
+          category: "",
+          batchNumber: "",
+          boxNumber: "",
+          stockQuantity: "",
+          purchasePrice: "",
+          sellingPrice: "",
+          expiryDate: "",
+          supplier: "",
+          invoiceNumber: "",
+        });
+      }
+    } catch (error) {
+      console.error("Add Product Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="p-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Product Name */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="productName"
-            value={formData.productName}
-            onChange={handleChange}
-            required
-            placeholder="Enter medicine name"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Product Name"
+          placeholder="Enter medicine name"
+          value={formData.productName}
+          onChange={(val) => handleChange("productName", val)}
+          required
+          error={errors.productName}
+        />
 
-        {/* Category */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category <span className="text-red-500">*</span>
-          </label>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all cursor-pointer"
-          >
-            <option value="prescription">Prescription</option>
-            <option value="over-the-counter">Over-the-Counter</option>
-          </select>
-        </div>
+        <InputField
+          label="Category"
+          placeholder="Select category"
+          value={formData.category}
+          options={PHARMACY_CATEGORIES.map((c) => ({
+            label: c.label,
+            value: c.key,
+          }))}
+          onChange={(val) => handleChange("category", val)}
+          required
+          isSearchable
+          error={errors.category}
+        />
 
-        {/* Batch Number */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Batch Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="batchNumber"
-            value={formData.batchNumber}
-            onChange={handleChange}
-            required
-            placeholder="e.g., BT2024001"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Batch Number"
+          placeholder="e.g., BT2024001"
+          value={formData.batchNumber}
+          onChange={(val) => handleChange("batchNumber", val)}
+          required
+          error={errors.batchNumber}
+        />
 
-         {/* Batch Number */}
-         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Box Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="boxNumber"
-            value={formData.boxNumber}
-            onChange={handleChange}
-            required
-            placeholder="e.g., BT2024001"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Box Number"
+          type="number"
+          placeholder="Enter box number"
+          value={formData.boxNumber}
+          onChange={(val) => handleChange("boxNumber", val)}
+          required
+          error={errors.boxNumber}
+        />
 
-        {/* Stock Quantity */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Stock Quantity <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            name="stockQuantity"
-            value={formData.stockQuantity}
-            onChange={handleChange}
-            required
-            min="1"
-            placeholder="Enter quantity"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Stock Quantity"
+          type="number"
+          placeholder="Enter quantity"
+          value={formData.stockQuantity}
+          onChange={(val) => handleChange("stockQuantity", val)}
+          required
+          error={errors.stockQuantity}
+        />
 
-        {/* Purchase Price */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Purchase Price <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-            <input
-              type="number"
-              name="purchasePrice"
-              value={formData.purchasePrice}
-              onChange={handleChange}
-              required
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="w-full pl-8 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
+        <InputField
+          label="Purchase Price"
+          type="number"
+          placeholder="0.00"
+          value={formData.purchasePrice}
+          onChange={(val) => handleChange("purchasePrice", val)}
+          required
+          error={errors.purchasePrice}
+        />
 
-        {/* Selling Price */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Selling Price <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
-            <input
-              type="number"
-              name="sellingPrice"
-              value={formData.sellingPrice}
-              onChange={handleChange}
-              required
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="w-full pl-8 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-            />
-          </div>
-        </div>
+        <InputField
+          label="Selling Price"
+          type="number"
+          placeholder="0.00"
+          value={formData.sellingPrice}
+          onChange={(val) => handleChange("sellingPrice", val)}
+          required
+          error={errors.sellingPrice}
+        />
 
-        {/* Expiry Date */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Expiry Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            name="expiryDate"
-            value={formData.expiryDate}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all cursor-pointer"
-          />
-        </div>
+        <InputField
+          label="Expiry Date"
+          type="date"
+          value={formData.expiryDate}
+          onChange={(val) => handleChange("expiryDate", val)}
+          required
+          error={errors.expiryDate}
+        />
 
-        {/* Supplier */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Supplier <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="supplier"
-            value={formData.supplier}
-            onChange={handleChange}
-            required
-            placeholder="Enter supplier name"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Supplier"
+          placeholder="Enter supplier name"
+          value={formData.supplier}
+          onChange={(val) => handleChange("supplier", val)}
+          required
+          error={errors.supplier}
+        />
 
-        {/* Invoice Number */}
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Invoice Number <span className="text-gray-400 text-xs">(Optional)</span>
-          </label>
-          <input
-            type="text"
-            name="invoiceNumber"
-            value={formData.invoiceNumber}
-            onChange={handleChange}
-            placeholder="Enter invoice reference"
-            className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-          />
-        </div>
+        <InputField
+          label="Invoice Number"
+          placeholder="Optional"
+          value={formData.invoiceNumber}
+          onChange={(val) => handleChange("invoiceNumber", val)}
+        />
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+      <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
         <button
           type="button"
           onClick={onClose}
-          className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap"
+          className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
         >
           Cancel
         </button>
+
         <button
           type="submit"
-          className="px-6 py-2.5 text-sm font-medium text-white bg-teal-500 rounded-lg hover:bg-teal-600 transition-colors cursor-pointer whitespace-nowrap"
+          disabled={loading}
+          className="px-6 py-2.5 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-all disabled:opacity-50"
         >
-          <i className="ri-add-line mr-2"></i>
-          Add to Inventory
+          {loading ? "Adding..." : "Add to Inventory"}
         </button>
       </div>
     </form>
