@@ -60,3 +60,12 @@ export async function PharmacySetupApi(formData) {
   );
   return responseData;
 }
+
+
+export async function SearchProductsApi(params) {
+  const responseData = await instance.get(
+    "api/inventory/search",
+    { params }
+  );
+  return responseData;
+}

@@ -6,6 +6,7 @@ import InventoryFilters from "./components/InventoryFilters";
 import AddStockModal from "../home/components/AddStockModal";
 import { inventoryData } from "../../mocks/inventoryData";
 import { useSyncQueryParams } from "@/utils/useSyncQueryParams";
+import { SearchProductsApi } from "@/API/authAPI's";
 
 export default function InventoryPage() {
   const [page, setPage] = useState(1);
@@ -16,7 +17,13 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [products, setProducts] = useState(inventoryData);
+  // const [products, setProducts] = useState(inventoryData);
+
+  const [products, setProducts] = useState<any[]>([]);
+const [totalItems, setTotalItems] = useState(0);
+const [totalPages, setTotalPages] = useState(1);
+const [loading, setLoading] = useState(false);
+
 
   useSyncQueryParams(
     {
@@ -59,32 +66,7 @@ export default function InventoryPage() {
     return { totalProducts, totalValue, lowStock, expiringSoon };
   }, [products]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((item) => {
-      const matchesSearch =
-        item.medicineName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.batchNo.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesCategory =
-        categoryFilter === "all" || item.category === categoryFilter;
-
-      const matchesStatus =
-        statusFilter === "all" || item.status === statusFilter;
-
-      const matchesStock =
-        stockStatusFilter === "all" || item.status === stockStatusFilter;
-
-      return matchesSearch && matchesCategory && matchesStatus && matchesStock;
-    });
-  }, [products, searchTerm, categoryFilter, statusFilter, stockStatusFilter]);
-
-  const totalItems = filteredProducts.length;
-  const totalPages = Math.ceil(totalItems / limit);
-
-  const paginatedProducts = useMemo(() => {
-    const start = (page - 1) * limit;
-    return filteredProducts.slice(start, start + limit);
-  }, [filteredProducts, page, limit]);
 
   useEffect(() => {
     setPage(1);
@@ -105,13 +87,64 @@ export default function InventoryPage() {
   };
 
   const handleEditProduct = (product: any) => {
-    // Handle edit product logic
     console.log("Edit product:", product);
   };
 
   const handleDeleteProduct = (productId: string) => {
     setProducts(products.filter((p) => p.id !== productId));
   };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await SearchProductsApi({
+          search: searchTerm,
+          category: categoryFilter,
+          status: statusFilter,
+          stock: stockStatusFilter,
+          page,
+          limit,
+        });
+  
+        const response = res.data;
+  
+        const rawProducts = Array.isArray(response.data)
+          ? response.data
+          : [];
+  
+        // Map backend fields → frontend expected fields
+        const formattedProducts = rawProducts.map((item: any) => ({
+          id: item.product_id,
+          medicineName: item.product_name,
+          batchNo: item.batch_number,
+          category: item.category,
+          stockQuantity: item.stock_quantity,
+          expiryDate: item.expiry_date,
+          price: item.selling_price,
+          status:
+            item.status === "in_stock"
+              ? "In Stock"
+              : item.status === "low_stock"
+              ? "Low Stock"
+              : item.status === "expired"
+              ? "Expired"
+              : "In Stock",
+        }));
+  
+        setProducts(formattedProducts);
+        setTotalItems(response.total || 0);
+        setTotalPages(Math.ceil((response.total || 0) / limit));
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
+    };
+  
+    fetchProducts();
+  }, [searchTerm, categoryFilter, statusFilter, stockStatusFilter, page, limit]);
+  
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -225,7 +258,9 @@ export default function InventoryPage() {
             {/* Inventory Table */}
 
             <InventoryTable
-              products={paginatedProducts}
+              // products={paginatedProducts}
+              products={products}
+
               page={page}
               limit={limit}
               totalItems={totalItems}
