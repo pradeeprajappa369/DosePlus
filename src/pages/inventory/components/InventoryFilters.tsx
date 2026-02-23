@@ -7,6 +7,17 @@ interface InventoryFiltersProps {
   onStatusChange: (value: string) => void;
   onAddProduct?: () => void;
 }
+import InputField from "@/CommonComponents/InputField";
+import { PHARMACY_CATEGORIES } from "../../../mocks/pharmacyCategories";
+
+export const STOCK_STATUS = [
+  { value: "all", label: "All Status" },
+  { value: "in_stock", label: "In Stock" },
+  { value: "low_stock", label: "Low Stock" },
+  { value: "out_of_stock", label: "Out of Stock" },
+  { value: "expired", label: "Expired" },
+  { value: "expiring_soon", label: "Expiring Soon" },
+];
 
 export default function InventoryFilters({
   searchTerm,
@@ -15,7 +26,7 @@ export default function InventoryFilters({
   onCategoryChange,
   statusFilter,
   onStatusChange,
-  onAddProduct
+  onAddProduct,
 }: InventoryFiltersProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -36,34 +47,27 @@ export default function InventoryFilters({
 
         {/* Category Filter */}
         <div className="min-w-[180px]">
-          <select
+          <InputField
+            label=""
+            placeholder="Select Category"
             value={categoryFilter}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all cursor-pointer bg-white"
-          >
-            <option value="all">All Categories</option>
-            <option value="Antibiotic">Antibiotic</option>
-            <option value="Painkiller">Painkiller</option>
-            <option value="Vitamin">Vitamin</option>
-            <option value="Antacid">Antacid</option>
-            <option value="Antihistamine">Antihistamine</option>
-            <option value="Antiseptic">Antiseptic</option>
-            <option value="Supplement">Supplement</option>
-          </select>
+            onChange={onCategoryChange}
+            options={[
+              { value: "all", label: "All Categories" },
+              ...PHARMACY_CATEGORIES,
+            ]}
+          />
         </div>
 
         {/* Status Filter */}
         <div className="min-w-[180px]">
-          <select
+          <InputField
+            label=""
+            placeholder="All Status"
             value={statusFilter}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all cursor-pointer bg-white"
-          >
-            <option value="all">All Status</option>
-            <option value="In Stock">In Stock</option>
-            <option value="Low Stock">Low Stock</option>
-            <option value="Expired">Expired</option>
-          </select>
+            onChange={onStatusChange}
+            options={STOCK_STATUS}
+          />
         </div>
 
         {/* Action Buttons */}

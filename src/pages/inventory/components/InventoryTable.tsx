@@ -1,4 +1,7 @@
-import React from "react";
+import { DeleteProductApi } from "@/API/InventoryAPI";
+import React, { useState } from "react";
+import DeleteInventoryModal from "./DeleteInventoryModal";
+import { showToast } from "@/CommonComponents/AppToaster";
 
 export interface InventoryItem {
   id: string;
@@ -8,7 +11,12 @@ export interface InventoryItem {
   stockQuantity: number;
   expiryDate: string;
   price: number;
-  status: "In Stock" | "Low Stock" | "Expired";
+  status:
+    | "In Stock"
+    | "Low Stock"
+    | "Out of Stock"
+    | "Expired"
+    | "Expiring Soon";
 }
 
 interface InventoryTableProps {
@@ -35,15 +43,29 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
   const [viewProduct, setViewProduct] = React.useState<InventoryItem | null>(
     null
   );
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(
+    null
+  );
+  const [deleting, setDeleting] = useState(false);
 
   const getStatusStyles = (status: string) => {
     switch (status) {
       case "In Stock":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
+
       case "Low Stock":
         return "bg-amber-50 text-amber-700 border-amber-200";
+
+      case "Out of Stock":
+        return "bg-gray-100 text-gray-700 border-gray-300";
+
       case "Expired":
         return "bg-red-50 text-red-700 border-red-200";
+
+      case "Expiring Soon":
+        return "bg-orange-50 text-orange-700 border-orange-200";
+
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
@@ -53,25 +75,24 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     switch (status) {
       case "In Stock":
         return "ri-checkbox-circle-line";
+
       case "Low Stock":
         return "ri-error-warning-line";
-      case "Expired":
+
+      case "Out of Stock":
         return "ri-close-circle-line";
+
+      case "Expired":
+        return "ri-close-circle-fill";
+
+      case "Expiring Soon":
+        return "ri-alarm-warning-line";
+
       default:
         return "ri-information-line";
     }
   };
 
-  const isExpiringSoon = (expiryDate: string) => {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const days = Math.floor(
-      (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    return days <= 30 && days > 0;
-  };
-
-  // 🔹 ADDED: pagination dots logic (isolated & safe)
   const getPageNumbers = () => {
     const pages: (number | "dots")[] = [];
 
@@ -92,6 +113,35 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     if (totalPages > 1) pages.push(totalPages);
 
     return pages;
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      setDeleting(true);
+
+      await DeleteProductApi({ productId: selectedProduct.id });
+
+      showToast({
+        message: `${selectedProduct.medicineName} deleted successfully`,
+        type: "success",
+      });
+
+      onDelete(selectedProduct.id);
+
+      setDeleteOpen(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error("Delete failed:", error);
+
+      showToast({
+        message: "Failed to delete product",
+        type: "error",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -130,6 +180,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                     ? "bg-red-50/30"
                     : item.status === "Low Stock"
                     ? "bg-amber-50/30"
+                    : item.status === "Expiring Soon"
+                    ? "bg-orange-50/30"
+                    : item.status === "Out of Stock"
+                    ? "bg-gray-100/40"
                     : ""
                 }`}
               >
@@ -155,8 +209,12 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 <td className="px-6 py-4">
                   <span
                     className={`text-sm font-semibold ${
-                      item.stockQuantity < 50
+                      item.status === "Out of Stock"
+                        ? "text-gray-500"
+                        : item.status === "Low Stock"
                         ? "text-amber-600"
+                        : item.status === "Expired"
+                        ? "text-red-600"
                         : "text-gray-800"
                     }`}
                   >
@@ -168,20 +226,24 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-sm ${
+                      className={`text-sm font-medium ${
                         item.status === "Expired"
-                          ? "text-red-600 font-medium"
-                          : isExpiringSoon(item.expiryDate)
-                          ? "text-amber-600 font-medium"
+                          ? "text-red-600"
+                          : item.status === "Expiring Soon"
+                          ? "text-orange-600"
                           : "text-gray-700"
                       }`}
                     >
                       {item.expiryDate}
                     </span>
-                    {isExpiringSoon(item.expiryDate) &&
-                      item.status !== "Expired" && (
-                        <i className="ri-alarm-warning-line text-amber-500 text-sm" />
-                      )}
+
+                    {item.status === "Expiring Soon" && (
+                      <i className="ri-alarm-warning-line text-orange-500 text-sm" />
+                    )}
+
+                    {item.status === "Expired" && (
+                      <i className="ri-close-circle-fill text-red-500 text-sm" />
+                    )}
                   </div>
                 </td>
 
@@ -216,7 +278,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                     </button>
 
                     <button
-                      onClick={() => onDelete(item.id)}
+                      onClick={() => {
+                        setSelectedProduct(item);
+                        setDeleteOpen(true);
+                      }}
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50"
                     >
                       <i className="ri-delete-bin-line text-gray-600 hover:text-red-600" />
@@ -369,6 +434,17 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                 </div>
               </div>
             )}
+
+            <DeleteInventoryModal
+              isOpen={deleteOpen}
+              onClose={() => {
+                setDeleteOpen(false);
+                setSelectedProduct(null);
+              }}
+              onConfirm={handleDeleteConfirm}
+              product={selectedProduct}
+              loading={deleting}
+            />
 
             <button
               disabled={page === totalPages}

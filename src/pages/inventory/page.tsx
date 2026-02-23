@@ -4,9 +4,15 @@ import Header from "../home/components/Header";
 import InventoryTable from "./components/InventoryTable";
 import InventoryFilters from "./components/InventoryFilters";
 import AddStockModal from "../home/components/AddStockModal";
-import { inventoryData } from "../../mocks/inventoryData";
 import { useSyncQueryParams } from "@/utils/useSyncQueryParams";
 import { SearchProductsApi } from "@/API/authAPI's";
+
+interface InventorySummary {
+  totalProducts: number;
+  totalValue: number;
+  lowStock: number;
+  expiringSoon: number;
+}
 
 export default function InventoryPage() {
   const [page, setPage] = useState(1);
@@ -17,13 +23,12 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  // const [products, setProducts] = useState(inventoryData);
-
+  const [summary, setSummary] = useState<InventorySummary | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [products, setProducts] = useState<any[]>([]);
-const [totalItems, setTotalItems] = useState(0);
-const [totalPages, setTotalPages] = useState(1);
-const [loading, setLoading] = useState(false);
-
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   useSyncQueryParams(
     {
@@ -44,51 +49,16 @@ const [loading, setLoading] = useState(false);
     }
   );
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const totalProducts = products.length;
-    const totalValue = products.reduce(
-      (sum, item) => sum + item.stockQuantity * item.price,
-      0
-    );
-    const lowStock = products.filter(
-      (item) => item.status === "Low Stock"
-    ).length;
-    const expiringSoon = products.filter((item) => {
-      const expiryDate = new Date(item.expiryDate);
-      const today = new Date();
-      const daysUntilExpiry = Math.floor(
-        (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
-    }).length;
-
-    return { totalProducts, totalValue, lowStock, expiringSoon };
-  }, [products]);
-
 
 
   useEffect(() => {
     setPage(1);
   }, [searchTerm, categoryFilter, statusFilter, stockStatusFilter]);
 
-  const handleAddProduct = (productData: any) => {
-    const newProduct = {
-      id: `INV${String(products.length + 1).padStart(3, "0")}`,
-      ...productData,
-      status:
-        productData.stockQuantity > 50
-          ? "In Stock"
-          : productData.stockQuantity > 10
-          ? "Low Stock"
-          : "Expired",
-    };
-    setProducts([...products, newProduct]);
-  };
-
   const handleEditProduct = (product: any) => {
-    console.log("Edit product:", product);
+    setEditingProduct(product);
   };
+  
 
   const handleDeleteProduct = (productId: string) => {
     setProducts(products.filter((p) => p.id !== productId));
@@ -101,17 +71,40 @@ const [loading, setLoading] = useState(false);
           search: searchTerm,
           category: categoryFilter,
           status: statusFilter,
-          stock: stockStatusFilter,
+          stock: statusFilter,
           page,
           limit,
         });
-  
+
         const response = res.data;
-  
-        const rawProducts = Array.isArray(response.data)
-          ? response.data
-          : [];
-  
+
+        const rawProducts = Array.isArray(response.data) ? response.data : [];
+        const rawSummary = response.summary || {};
+
+        setSummary({
+          totalProducts: rawSummary.total_products || 0,
+          totalValue: rawSummary.total_stock_value || 0,
+          lowStock: rawSummary.low_stock_items || 0,
+          expiringSoon: rawSummary.expiring_soon_items || 0,
+        });
+
+        const formatStatus = (status: string) => {
+          switch (status) {
+            case "in_stock":
+              return "In Stock";
+            case "low_stock":
+              return "Low Stock";
+            case "out_of_stock":
+              return "Out of Stock";
+            case "expired":
+              return "Expired";
+            case "expiring_soon":
+              return "Expiring Soon";
+            default:
+              return "In Stock";
+          }
+        };
+
         // Map backend fields → frontend expected fields
         const formattedProducts = rawProducts.map((item: any) => ({
           id: item.product_id,
@@ -121,16 +114,9 @@ const [loading, setLoading] = useState(false);
           stockQuantity: item.stock_quantity,
           expiryDate: item.expiry_date,
           price: item.selling_price,
-          status:
-            item.status === "in_stock"
-              ? "In Stock"
-              : item.status === "low_stock"
-              ? "Low Stock"
-              : item.status === "expired"
-              ? "Expired"
-              : "In Stock",
+          status: formatStatus(item.status),
         }));
-  
+
         setProducts(formattedProducts);
         setTotalItems(response.total || 0);
         setTotalPages(Math.ceil((response.total || 0) / limit));
@@ -141,11 +127,18 @@ const [loading, setLoading] = useState(false);
         setTotalPages(1);
       }
     };
-  
-    fetchProducts();
-  }, [searchTerm, categoryFilter, statusFilter, stockStatusFilter, page, limit]);
-  
 
+    fetchProducts();
+  }, [
+    searchTerm,
+    categoryFilter,
+    statusFilter,
+    stockStatusFilter,
+    page,
+    limit,
+  ]);
+
+  console.log(summary);
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
@@ -189,7 +182,7 @@ const [loading, setLoading] = useState(false);
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Total Products</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats.totalProducts}
+                    {summary?.totalProducts || 0}
                     </p>
                   </div>
                   <div className="w-12 h-12 flex items-center justify-center bg-teal-100 rounded-lg">
@@ -205,7 +198,7 @@ const [loading, setLoading] = useState(false);
                       Total Stock Value
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      ${stats.totalValue.toFixed(2)}
+                    ₹{summary?.totalValue?.toFixed(2) || "0.00"}
                     </p>
                   </div>
                   <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-lg">
@@ -221,7 +214,7 @@ const [loading, setLoading] = useState(false);
                       Low Stock Items
                     </p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats.lowStock}
+                    {summary?.lowStock || 0}
                     </p>
                   </div>
                   <div className="w-12 h-12 flex items-center justify-center bg-amber-100 rounded-lg">
@@ -235,7 +228,7 @@ const [loading, setLoading] = useState(false);
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Expiring Soon</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats.expiringSoon}
+                    {summary?.expiringSoon || 0}
                     </p>
                   </div>
                   <div className="w-12 h-12 flex items-center justify-center bg-red-100 rounded-lg">
@@ -258,9 +251,7 @@ const [loading, setLoading] = useState(false);
             {/* Inventory Table */}
 
             <InventoryTable
-              // products={paginatedProducts}
               products={products}
-
               page={page}
               limit={limit}
               totalItems={totalItems}
