@@ -69,3 +69,13 @@ export async function SearchProductsApi(params) {
   );
   return responseData;
 }
+
+// --- Rebase Testing ---
+
+// export async function SearchProductsApi(params) {
+//   const responseData = await instance.get(
+//     "api/inventory/search",
+//     { params }
+//   );
+//   return responseData;
+// }
