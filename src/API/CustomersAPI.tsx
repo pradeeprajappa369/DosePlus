@@ -36,3 +36,13 @@ export async function GetCustomerStatsApi() {
   );
   return responseData;
 }
+
+// --- Rebase Testing Need to remove this Duplicate After Sometime---
+
+/** Customer Stats */
+export async function GetCustomerStatsApi() {
+  const responseData = await instance.get(
+    "api/customers/stats"
+  );
+  return responseData;
+}
