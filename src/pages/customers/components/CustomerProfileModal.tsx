@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface PurchaseHistory {
   invoiceId: string;
@@ -28,21 +28,31 @@ interface CustomerProfileModalProps {
   customer: Customer | null;
 }
 
-export default function CustomerProfileModal({ isOpen, onClose, customer }: CustomerProfileModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'notes'>('overview');
-  const [customerNotes, setCustomerNotes] = useState('');
+export default function CustomerProfileModal({
+  isOpen,
+  onClose,
+  customer,
+}: CustomerProfileModalProps) {
+  const [activeTab, setActiveTab] = useState<"overview" | "history" | "notes">(
+    "overview"
+  );
+  const [customerNotes, setCustomerNotes] = useState("");
 
   if (!isOpen || !customer) return null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: 'ri-user-line' },
-    { id: 'history', label: 'Purchase History', icon: 'ri-shopping-bag-line' },
-    { id: 'notes', label: 'Notes', icon: 'ri-file-text-line' }
+    { id: "overview", label: "Overview", icon: "ri-user-line" },
+    { id: "history", label: "Purchase History", icon: "ri-shopping-bag-line" },
+    { id: "notes", label: "Notes", icon: "ri-file-text-line" },
   ];
 
   return (
@@ -53,12 +63,20 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-lg font-bold text-teal-600">
-                {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                {customer.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)}
               </span>
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">{customer.name}</h2>
-              <p className="text-sm text-gray-500">Customer ID: {customer.id}</p>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {customer.name ?? ""}
+              </h2>
+              <p className="text-sm text-gray-500">
+                Customer ID: {customer.id}
+              </p>
             </div>
           </div>
           <button
@@ -78,8 +96,8 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex items-center gap-2 px-1 py-3 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-teal-600 text-teal-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? "border-teal-600 text-teal-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}
               >
                 <i className={`${tab.icon} text-lg`}></i>
@@ -92,71 +110,117 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Overview Tab */}
-          {activeTab === 'overview' && (
+          {activeTab === "overview" && (
             <div className="space-y-6">
               {/* Contact Information */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Contact Information</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  Contact Information
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1">Mobile Number</p>
-                    <p className="text-sm font-medium text-gray-900">{customer.mobile}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {customer.mobile}
+                    </p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-xs text-gray-600 mb-1">Email Address</p>
-                    <p className="text-sm font-medium text-gray-900">{customer.email}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {customer.email}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Customer Stats */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Customer Statistics</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  Customer Statistics
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                     <div className="flex items-center gap-2 mb-2">
                       <i className="ri-shopping-bag-line text-blue-600"></i>
-                      <p className="text-xs text-blue-600 font-medium">Total Orders</p>
+                      <p className="text-xs text-blue-600 font-medium">
+                        Total Orders
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">{customer.totalOrders}</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {customer.totalOrders ?? 0}
+                    </p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4 border border-green-100">
                     <div className="flex items-center gap-2 mb-2">
                       <i className="ri-money-rupee-circle-line text-green-600"></i>
-                      <p className="text-xs text-green-600 font-medium">Total Spend</p>
+                      <p className="text-xs text-green-600 font-medium">
+                        Total Spend
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-green-900">₹{customer.totalSpend.toLocaleString('en-IN')}</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {/* ₹{customer.totalSpend.toLocaleString("en-IN")} */}
+                      ₹{(customer.totalSpend ?? 0).toLocaleString('en-IN')}
+                    </p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
                     <div className="flex items-center gap-2 mb-2">
                       <i className="ri-line-chart-line text-purple-600"></i>
-                      <p className="text-xs text-purple-600 font-medium">Lifetime Value</p>
+                      <p className="text-xs text-purple-600 font-medium">
+                        Lifetime Value
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-purple-900">₹{customer.lifetimeValue.toLocaleString('en-IN')}</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {/* ₹{customer.lifetimeValue.toLocaleString("en-IN")} */}
+                      ₹{(customer.lifetimeValue ?? 0).toLocaleString('en-IN')}
+                    </p>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
                     <div className="flex items-center gap-2 mb-2">
                       <i className="ri-calendar-line text-orange-600"></i>
-                      <p className="text-xs text-orange-600 font-medium">Member Since</p>
+                      <p className="text-xs text-orange-600 font-medium">
+                        Member Since
+                      </p>
                     </div>
-                    <p className="text-sm font-bold text-orange-900">{formatDate(customer.joinDate)}</p>
+                    <p className="text-sm font-bold text-orange-900">
+                      {/* {formatDate(customer.joinDate)} */}
+                      {customer.joinDate ? formatDate(customer.joinDate) : "-"}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Recent Activity */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  Recent Activity
+                </h3>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Last Purchase</p>
-                      <p className="text-xs text-gray-600 mt-1">{formatDate(customer.lastPurchaseDate)}</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        Last Purchase
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {/* {formatDate(customer.lastPurchaseDate)} */}
+                        {customer.lastPurchaseDate
+  ? formatDate(customer.lastPurchaseDate)
+  : "-"}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">Average Order Value</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        Average Order Value
+                      </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        ₹{Math.round(customer.totalSpend / customer.totalOrders).toLocaleString('en-IN')}
+                        {/* ₹ */}
+                        {/* {Math.round(
+                          customer.totalSpend / customer.totalOrders
+                        ).toLocaleString("en-IN")} */}
+                        ₹{(
+  customer.totalOrders && customer.totalOrders > 0
+    ? Math.round((customer.totalSpend ?? 0) / customer.totalOrders)
+    : 0
+).toLocaleString('en-IN')}
                       </p>
                     </div>
                   </div>
@@ -166,7 +230,9 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
               {/* Notes Preview */}
               {customer.notes && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Notes</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                    Notes
+                  </h3>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p className="text-sm text-gray-700">{customer.notes}</p>
                   </div>
@@ -176,7 +242,7 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
           )}
 
           {/* Purchase History Tab */}
-          {activeTab === 'history' && (
+          {activeTab === "history" && (
             <div>
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <table className="w-full">
@@ -203,20 +269,27 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {customer.purchaseHistory.map((purchase) => (
+                    {(customer.purchaseHistory ?? []).map((purchase) => (
                       <tr key={purchase.invoiceId} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <span className="text-sm font-medium text-teal-600">{purchase.invoiceId}</span>
+                          <span className="text-sm font-medium text-teal-600">
+                            {purchase.invoiceId}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm text-gray-900 whitespace-nowrap">{formatDate(purchase.date)}</span>
+                          <span className="text-sm text-gray-900 whitespace-nowrap">
+                            {formatDate(purchase.date)}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm text-gray-900">{purchase.items}</span>
+                          <span className="text-sm text-gray-900">
+                            {purchase.items}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                            ₹{purchase.amount.toLocaleString('en-IN')}
+                            {/* ₹{purchase.amount.toLocaleString("en-IN")} */}
+                            ₹{(purchase.amount ?? 0).toLocaleString('en-IN')}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -239,7 +312,7 @@ export default function CustomerProfileModal({ isOpen, onClose, customer }: Cust
           )}
 
           {/* Notes Tab */}
-          {activeTab === 'notes' && (
+          {activeTab === "notes" && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

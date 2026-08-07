@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Sidebar from '../home/components/Sidebar';
 import Header from '../home/components/Header';
 import CustomerSummaryCards from './components/CustomerSummaryCards';
@@ -6,6 +6,8 @@ import CustomersTable from './components/CustomersTable';
 import AddCustomerModal from './components/AddCustomerModal';
 import CustomerProfileModal from './components/CustomerProfileModal';
 import { customersData } from '../../mocks/customersData';
+import { useSyncQueryParams } from '@/utils/useSyncQueryParams';
+import { GetAllCustomersApi } from '@/API/CustomersAPI';
 
 interface Customer {
   id: string;
@@ -29,11 +31,52 @@ interface Customer {
 
 export default function CustomersPage() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>(customersData);
-  const [searchTerm, setSearchTerm] = useState('');
+  // const [customers, setCustomers] = useState<Customer[]>(customersData);
+  // const [searchTerm, setSearchTerm] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+const [searchTerm, setSearchTerm] = useState('');
+const [page, setPage] = useState('1');
+const [limit, setLimit] = useState('10');
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+
+  useSyncQueryParams(
+    {
+      search: searchTerm,
+      page,
+      limit,
+    },
+    {
+      search: setSearchTerm,
+      page: setPage,
+      limit: setLimit,
+    }
+  );
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [searchTerm, page, limit]);
+  
+  const fetchCustomers = async () => {
+    try {
+      const response = await GetAllCustomersApi({
+        search: searchTerm,
+        page,
+        limit,
+      });
+  
+      // adjust based on backend response structure
+      const apiData = response?.data?.data || [];
+  
+      setCustomers(apiData);
+    } catch (error) {
+      console.error("Failed to fetch customers", error);
+    }
+  };
+
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -69,21 +112,12 @@ export default function CustomersPage() {
     });
   }, [customers, searchTerm]);
 
-  const handleAddCustomer = (newCustomer: { name: string; mobile: string; email: string }) => {
-    const customer: Customer = {
-      id: `CUST${String(customers.length + 1).padStart(3, '0')}`,
-      name: newCustomer.name,
-      mobile: newCustomer.mobile,
-      email: newCustomer.email,
-      totalOrders: 0,
-      totalSpend: 0,
-      lastPurchaseDate: new Date().toISOString().split('T')[0],
-      joinDate: new Date().toISOString().split('T')[0],
-      lifetimeValue: 0,
-      purchaseHistory: [],
-      notes: ''
-    };
-    setCustomers([customer, ...customers]);
+  const handleAddCustomer = async (newCustomer: {
+    name: string;
+    mobile: string;
+    email: string;
+  }) => {
+    await fetchCustomers(); // refresh list from API
   };
 
   const handleViewProfile = (customer: Customer) => {
@@ -122,7 +156,11 @@ export default function CustomersPage() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              // onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage('1'); // reset page on search
+              }}
               placeholder="Search by name or mobile number..."
               className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
             />
